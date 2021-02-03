@@ -23,6 +23,8 @@
 #include "mz61581.h"
 #elif defined(MPI3501)
 #include "mpi3501.h"
+#elif defined(GC9307)
+#include "GC9307.h"
 #else
 #error Please reconfigure CMake with your display controller directive set!
 #endif
