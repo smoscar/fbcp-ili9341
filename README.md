@@ -1,3 +1,15 @@
+This fork is currently in development, but intended to accomplish 2 new things:
+
+1) Add support for the GC9307-based circular display, as shown here: https://www.alibaba.com/product-detail/Small-IPS-Round-LCD-Module-1_62550674738.html
+
+2) Add functionality to split the source video feed into top and bottom halves, sending each half to a different display which are both connected to SPI0 but on different chip select lines (CE0 and CE1). Think of this as adding support for 2-player split screen games, where each player's view is sent to different screens; for VR games sending halves of the video to the left and right eye displays; or for any other application which wants to control two different SPI-based displays at the same time.
+
+Progess so far:
+
+1) Not yet tested, but possibly finished! Custom GC9307 driver files added (GC9307.h and GC9307.cpp); driver is included if build option is set (CMakeLists.txt,  display.cpp). 
+
+2) ...
+
 # Introduction
 
 This repository implements a driver for certain SPI-based LCD displays for Raspberry Pi A, B, 2, 3, 4 and Zero.
