@@ -1,11 +1,12 @@
-This fork is currently in development, but intended to accomplish 2 new things:
+## Notes on this fork
+
+This fork (currently early in development) is intended to accomplish 2 new things:
 
 1) Add support for the GC9307-based circular display, as shown here: https://www.alibaba.com/product-detail/Small-IPS-Round-LCD-Module-1_62550674738.html
 
 2) Add functionality to split the source video feed into top and bottom halves, sending each half to a different display which are both connected to SPI0 but on different chip select lines (CE0 and CE1). Think of this as adding support for 2-player split screen games, where each player's view is sent to different screens; for VR games, sending halves of the video to the left and right eye displays; or for any other application which wants to control two different SPI-based displays at the same time on the Raspberry Pi.
 
-
-Progress so far:
+### Progress so far:
 
 1) GC9307 display support tested and (basically) working! 
    - Custom GC9307 display files added (GC9307.h and GC9307.cpp)
@@ -15,6 +16,8 @@ Progress so far:
    - Added build options for CS_COPY and CS_SPLIT (in CMakeLists.txt), where CS_COPY will send full copies of the source video twice over SPI - once with CE0 enabled and the               other with CE1 enabled - and CS_SPLIT will split the source into top and bottom halves, sending the top half with CE0 enabled and bottom half with CE1 enabled.
    - defined COPY_TO_CE1 and SPLIT_TO_CE1 (associated with the 2 build options above) in config.h
    - Next up: if either of the 2 build options are enabled, run display initialization tasks twice - once with CE0 and once with CE1 enabled
+
+### Now back to the original README...
 
 
 # Introduction
