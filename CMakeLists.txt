@@ -188,6 +188,16 @@ if (DMA_RX_CHANNEL)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDMA_RX_CHANNEL=${DMA_RX_CHANNEL}")
 endif()
 
+if (CS_COPY)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCS_COPY")
+	message(STATUS "Copying frames to 2nd chip select (CE0 + CE1)")
+endif()
+
+if (CS_SPLIT)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCS_SPLIT")
+	message(STATUS "Splitting frames over 2 chip selects (top half to CE0, bottom half to CE1)")
+endif()
+
 option(ADAFRUIT_ILI9341_PITFT "Target Adafruit's ILI9341-based PiTFT display" OFF)
 option(FREEPLAYTECH_WAVESHARE32B "Target WaveShare32B ILI9341 display on Freeplaytech's CM3/Zero devices)" OFF)
 option(WAVESHARE35B_ILI9486 "Target Waveshare's ILI9486-based Waveshare Wavepear 3.5 inch (B) display" OFF)
