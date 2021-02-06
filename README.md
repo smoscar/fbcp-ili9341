@@ -10,10 +10,10 @@ This fork (currently early in development) is intended to accomplish 2 new thing
 
 1) GC9307 display support tested and (basically) working! 
    - Custom GC9307 display files added (GC9307.h and GC9307.cpp)
-   - GC9307 files are included if build option if -GC9307 is used (CMakeLists.txt,  display.cpp). 
+   - GC9307 files are included if build option -GC9307 is used (CMakeLists.txt,  display.cpp). 
 
 2) Functionality for 2 displays still early in development:
-   - Added build options for CS_COPY and CS_SPLIT (in CMakeLists.txt), where CS_COPY will send full copies of the source video twice over SPI - once with CE0 enabled and the               other with CE1 enabled - and CS_SPLIT will split the source into top and bottom halves, sending the top half with CE0 enabled and bottom half with CE1 enabled.
+   - Added build options for CS_COPY and CS_SPLIT (in CMakeLists.txt), where CS_COPY will send full copies of the source video twice over SPI - once with CE0 enabled and the               other with CE1 enabled - and CS_SPLIT will split the source into top and bottom halves, sending the top half with CE0 enabled and bottom half with CE1 enabled. CS_COPY           is really only being developed for intermediate testing purposes, but I don't see the harm in leaving it in in the final repo.
    - defined COPY_TO_CE1 and SPLIT_TO_CE1 (associated with the 2 build options above) in config.h
    - Next up: if either of the 2 build options are enabled, run display initialization tasks twice - once with CE0 and once with CE1 enabled
 
