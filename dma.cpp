@@ -638,7 +638,7 @@ void SPIDMATransfer(SPITask *task)
   pendingTaskBytes = task->PayloadSize();
 
   // First send the SPI command byte in Polled SPI mode
-  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS;
+  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
 
 #ifndef SPI_3WIRE_PROTOCOL
   CLEAR_GPIO(GPIO_TFT_DATA_CONTROL);
@@ -657,7 +657,7 @@ void SPIDMATransfer(SPITask *task)
   SET_GPIO(GPIO_TFT_DATA_CONTROL);
 #endif
 
-  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS;
+  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
 
   dmaTx->cbAddr = VIRT_TO_BUS(dmaCb, tx0);
   dmaRx->cbAddr = VIRT_TO_BUS(dmaCb, rx0);
@@ -672,7 +672,7 @@ void SPIDMATransfer(SPITask *task)
 void SPIDMATransfer(SPITask *task)
 {
   // Transition the SPI peripheral to enable the use of DMA
-  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS;
+  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
   uint32_t *headerAddr = task->DmaSpiHeaderAddress();
   *headerAddr = BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | (task->PayloadSize() << 16); // The first four bytes written to the SPI data register control the DLEN and CS,CPOL,CPHA settings.
 
@@ -731,7 +731,7 @@ void SPIDMATransfer(SPITask *task)
   }
 
   __sync_synchronize();
-  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS;
+  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
   __sync_synchronize();
 }
 

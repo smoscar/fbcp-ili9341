@@ -121,7 +121,7 @@ static irqreturn_t irq_handler(int irq, void* dev_id)
     currentTask = GetTask();
     if (!currentTask)
     {
-      spi->cs = (cs & ~BCM2835_SPI0_CS_TA) | BCM2835_SPI0_CS_CLEAR;
+      spi->cs = (cs & ~BCM2835_SPI0_CS_TA) | BCM2835_SPI0_CS_CLEAR | CS_TARGET; ///////////////////////not sure if CS_TARGET goes here...
       return IRQ_HANDLED;
     }
 
@@ -294,7 +294,7 @@ void DMATest()
 void PumpSPI(void)
 {
 #ifdef KERNEL_DRIVE_WITH_IRQ
-  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD; // Initialize the Control and Status register to defaults: CS=0 (Chip Select), CPHA=0 (Clock Phase), CPOL=0 (Clock Polarity), CSPOL=0 (Chip Select Polarity), TA=0 (Transfer not active), and reset TX and RX queues.
+  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD | CS_TARGET; // Initialize the Control and Status register to defaults: CS=0 (Chip Select), CPHA=0 (Clock Phase), CPOL=0 (Clock Polarity), CSPOL=0 (Chip Select Polarity), TA=0 (Transfer not active), and reset TX and RX queues.
 #else
   if (spiTaskMemory->queueTail != spiTaskMemory->queueHead)
   {
@@ -398,7 +398,7 @@ static int display_initialization_thread(void *unused)
   QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_X, 0, 0, DISPLAY_WIDTH >> 8, DISPLAY_WIDTH & 0xFF);
   QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_Y, 0, 0, DISPLAY_HEIGHT >> 8, DISPLAY_HEIGHT & 0xFF);
 
-  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD;
+  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD | CS_TARGET;
 #endif
 
   PumpSPI();
