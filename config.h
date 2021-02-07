@@ -240,16 +240,3 @@
 // driving thread. Otherwise, let the kernel drive SPI (e.g. via interrupts or its own thread)
 // This should be unset, only available for debugging.
 // #define KERNEL_MODULE_CLIENT_DRIVES
-
-// if defined, copies every frame twice over the SPI - first with CE0 enabled and next with CE1 enabled -
-// enabling 2 SPI displays running simultaneously.
-#if defined(CS_COPY)
-#define COPY_TO_CE1 1
-endif
-
-// if defined, splits every frame into two, sending the top half to the display connected to CE0 and 
-// the bottom half to the display connected to CE1. This enables 2 SPI displays running simultaneously,
-// each showing a different subset of the source frames.
-#if defined(CS_SPLIT)
-#define SPLIT_TO_CE1 1
-#endif

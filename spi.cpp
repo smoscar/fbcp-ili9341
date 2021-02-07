@@ -600,7 +600,13 @@ int InitSPI()
 
 #if !defined(KERNEL_MODULE) && (!defined(KERNEL_MODULE_CLIENT) || defined(KERNEL_MODULE_CLIENT_DRIVES))
   printf("Initializing display\n");
-  InitSPIDisplay();
+  InitSPIDisplay(); //initialize display connected to SPI0, CE0
+
+#if defined(CS_COPY) || defined(CS_SPLIT) //initialize 2nd display
+  CS_TARGET = 1; //CE1
+  InitSPIDisplay(); //initialize display on SPI0, CE1
+  CS_TARGET = 0; //back to CE0 (probably not necessary?)
+#endif
 
 #ifdef USE_SPI_THREAD
   // Create a dedicated thread to feed the SPI bus. While this is fast, it consumes a lot of CPU. It would be best to replace
