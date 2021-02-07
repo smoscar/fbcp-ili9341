@@ -13,11 +13,11 @@ This fork (currently early in development) is intended to accomplish 2 new thing
    - GC9307 files are included if build option -GC9307 is used (CMakeLists.txt,  display.cpp). 
 
 2) Functionality for 2 displays still early in development:
-   - Added build options for CS_COPY and CS_SPLIT (in CMakeLists.txt), where CS_COPY will send full copies of the source video twice over SPI - once with CE0 enabled and the               other with CE1 enabled - and CS_SPLIT will split the source into top and bottom halves, sending the top half with CE0 enabled and bottom half with CE1 enabled. CS_COPY           is really only being developed for intermediate testing purposes, but I don't see the harm in leaving it in in the final repo.
-   - defined COPY_TO_CE1 and SPLIT_TO_CE1 (associated with the 2 build options above) in config.h
-   - initialized CS_TARGET in spi.h, to be used to toggle between SPI CE0 and CE1 in the SPI register
-   - added CS_TARGET into (hopefully) all relevent fields where SPI register is controlled, in spi.h, spi.cpp, dma.cpp, bcm2835_spi_display
-   - Up next: where display is initialized, loop for both CE0 and CE1
+   - Added build options to define CS_COPY and CS_SPLIT (in CMakeLists.txt), where CS_COPY will send full copies of the source video twice over SPI - once with CE0 enabled and        the other with CE1 enabled - and CS_SPLIT will split the source into top and bottom halves, sending the top half with CE0 enabled and bottom half with CE1 enabled. CS_COPY      is really only being developed for intermediate testing purposes (if you wanted to always show the same thing on both displays, connect them both to CE0).
+   - initialized CS_TARGET=0 (for CE0) in spi.h, to be used to toggle between CE0 and CE1 in the SPI register
+   - added CS_TARGET into (hopefully) all relevent fields where SPI register is controlled (spi.h, spi.cpp, dma.cpp, bcm2835_spi_display)
+   - Where display is inititialized (spi.cpp), if either CS_COPY or CS_SPLIT is defined, the display is initialized twice - once for each chip select.
+   - Up next: when a frame is sent over SPI, send it twice - once for each chip select. Are there any other SPI tasks I have to do the same thing with?
 
 ### Now back to the original README...
 
