@@ -1,4 +1,4 @@
-## Notes on this fork
+### Notes on this fork
 
 This fork (currently early in development) is intended to accomplish 2 new things:
 
@@ -15,7 +15,9 @@ This fork (currently early in development) is intended to accomplish 2 new thing
 2) Functionality for 2 displays still early in development:
    - Added build options for CS_COPY and CS_SPLIT (in CMakeLists.txt), where CS_COPY will send full copies of the source video twice over SPI - once with CE0 enabled and the               other with CE1 enabled - and CS_SPLIT will split the source into top and bottom halves, sending the top half with CE0 enabled and bottom half with CE1 enabled. CS_COPY           is really only being developed for intermediate testing purposes, but I don't see the harm in leaving it in in the final repo.
    - defined COPY_TO_CE1 and SPLIT_TO_CE1 (associated with the 2 build options above) in config.h
-   - Next up: if either of the 2 build options are enabled, run display initialization tasks twice - once with CE0 and once with CE1 enabled
+   - initialized CS_TARGET in spi.h, to be used to toggle between SPI CE0 and CE1 in the SPI register
+   - added CS_TARGET into (hopefully) all relevent fields where SPI register is controlled, in spi.h, spi.cpp, dma.cpp, bcm2835_spi_display
+   - Up next: where display is initialized, loop for both CE0 and CE1
 
 ### Now back to the original README...
 
