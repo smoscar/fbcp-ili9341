@@ -157,7 +157,7 @@ int main()
       // If THROTTLE_INTERLACING is not defined, we'll fall right through and immediately submit the rest of the remaining content on screen to attempt to minimize the visual
       // observable effect of interlacing, although at the expense of smooth animation (falling through here causes jitter)
     }
-    else
+    else //if previous frame wasn't interlaced, load a new frame
     {
       uint64_t waitStart = tick();
       while(__atomic_load_n(&numNewGpuFrames, __ATOMIC_SEQ_CST) == 0)
@@ -181,11 +181,14 @@ int main()
           if (programRunning) syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAIT, 0, 0, 0, 0); // Sleep until the next frame arrives
       }
     }
+    // at this point, a new frame has just been loaded    
 
     bool spiThreadWasWorkingHardBefore = false;
+for (int SPI_LOOP=0; SPI_LOOP<NUM_CS_LOOPS;SPI_LOOP++) { //////////////////////////////////////////////LOOP FOR BOTH DISPLAYS?
+    CS_TARGET = SPI_LOOP;
 
     // At all times keep at most two rendered frames in the SPI task queue pending to be displayed. Only proceed to submit a new frame
-    // once the older of those has been displayed.
+    // to the task queue once the older of those has been displayed.
     bool once = true;
     while ((spiTaskMemory->queueTail + SPI_QUEUE_SIZE - spiTaskMemory->queueHead) % SPI_QUEUE_SIZE > (spiTaskMemory->queueTail + SPI_QUEUE_SIZE - prevFrameEnd) % SPI_QUEUE_SIZE)
     {
@@ -221,6 +224,8 @@ int main()
 #endif
       }
     }
+
+    // at this point, there is now space for the new frame to be added to the task queue (the older of the two frames has been sent)
 
     int expiredFrames = 0;
     uint64_t now = tick();
@@ -569,7 +574,10 @@ int main()
     }
     statsBytesTransferred += bytesTransferred;
 #endif
-  }
+
+  }//////////////////////////////////////////////END LOOP FOR BOTH DISPLAYS
+
+  } // end "while(programRunning)" loop
 
   DeinitGPU();
   DeinitSPI();

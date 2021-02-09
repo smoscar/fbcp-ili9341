@@ -240,3 +240,10 @@
 // driving thread. Otherwise, let the kernel drive SPI (e.g. via interrupts or its own thread)
 // This should be unset, only available for debugging.
 // #define KERNEL_MODULE_CLIENT_DRIVES
+
+// testing: normally, a single frame is sent over SPI just once, but for CS_SPLIT/COPY options, the 
+// relevant code will be looped through twice to send frames to CE0 and CE1
+NUM_CS_LOOPS = 1;
+#if defined(CS_SPLIT) || defined(CS_COPY)
+  NUM_CS_LOOPS = 2;
+#endif
