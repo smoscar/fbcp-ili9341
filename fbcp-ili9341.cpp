@@ -30,6 +30,7 @@
 #include "keyboard.h"
 #include "low_battery.h"
 
+//define some functions (CountNumChangedPixels, SignalToString, stuff about the quitting the program)
 int CountNumChangedPixels(uint16_t *framebuffer, uint16_t *prevFramebuffer)
 {
   int changedPixels = 0;
@@ -89,8 +90,10 @@ void ProgramInterruptHandler(int signal)
   syscall(SYS_futex, &numNewGpuFrames, FUTEX_WAKE, 1, 0, 0, 0);
 }
 
+//main program
 int main()
 {
+  //signal interrupts
   signal(SIGINT, ProgramInterruptHandler);
   signal(SIGQUIT, ProgramInterruptHandler);
   signal(SIGUSR1, ProgramInterruptHandler);
@@ -114,6 +117,7 @@ int main()
 
   spans = (Span*)Malloc((gpuFrameWidth * gpuFrameHeight / 2) * sizeof(Span), "main() task spans");
   int size = gpuFramebufferSizeBytes;
+
 #ifdef USE_GPU_VSYNC
   // BUG in vc_dispmanx_resource_read_data(!!): If one is capturing a small subrectangle of a large screen resource rectangle, the destination pointer 
   // is in vc_dispmanx_resource_read_data() incorrectly still taken to point to the top-left corner of the large screen resource, instead of the top-left
@@ -122,6 +126,14 @@ int main()
   // to randomly fail and then subsequently hang if called a second time)
   size *= 2;
 #endif
+
+#ifdef CS_SPLIT //pre-allocate space to store half of the framebuffer
+  int halfsize = size / 2;
+  uint16_t* halfframebuffer[2] = { (uint16_t*)Malloc(halfsize, "main() halfframebuffer0"), (uint16_t*)Malloc(gpuFramebufferSizeBytes/2, "main() halfframebuffer1") };
+  memset(halfframebuffer[0], 0, halfsize);
+  memset(halfframebuffer[1], 0, gpuFramebufferSizeBytes/2);
+#endif
+
   uint16_t *framebuffer[2] = { (uint16_t *)Malloc(size, "main() framebuffer0"), (uint16_t *)Malloc(gpuFramebufferSizeBytes, "main() framebuffer1") };
   memset(framebuffer[0], 0, size); // Doublebuffer received GPU memory contents, first buffer contains current GPU memory,
   memset(framebuffer[1], 0, gpuFramebufferSizeBytes); // second buffer contains whatever the display is currently showing. This allows diffing pixels between the two.
@@ -138,6 +150,9 @@ int main()
   bool interlacedUpdate = false; // True if the previous update we did was an interlaced half field update.
   int frameParity = 0; // For interlaced frame updates, this is either 0 or 1 to denote evens or odds.
   OpenKeyboard();
+
+
+
   printf("All initialized, now running main loop...\n");
   while(programRunning)
   {
@@ -184,8 +199,6 @@ int main()
     // at this point, a new frame has just been loaded    
 
     bool spiThreadWasWorkingHardBefore = false;
-for (int SPI_LOOP=0; SPI_LOOP<NUM_CS_LOOPS;SPI_LOOP++) { ///////LOOP FOR MULTIPLE DISPLAYS?
-    uint32_t CS_TARGET = SPI_LOOP;
 
     // At all times keep at most two rendered frames in the SPI task queue pending to be displayed. Only proceed to submit a new frame
     // to the task queue once the older of those has been displayed.
@@ -338,6 +351,11 @@ for (int SPI_LOOP=0; SPI_LOOP<NUM_CS_LOOPS;SPI_LOOP++) { ///////LOOP FOR MULTIPL
     const double timesliceToUseForScreenUpdates = 1500000;
 #endif
     const double tooMuchToUpdateUsecs = timesliceToUseForScreenUpdates / desiredTargetFps; // If updating the current and new frame takes too many frames worth of allotted time, drop to interlacing.
+
+
+    //for (uint32_t SPI_LOOP = 0; SPI_LOOP < NUM_CS_LOOPS; SPI_LOOP++) { ///////LOOP FOR MULTIPLE DISPLAYS?
+    //    CS_TARGET = SPI_LOOP;
+        /////split framebuffer into left and right halves before calculating numChangedPixels,diffing,sending
 
 #if !defined(NO_INTERLACING) || (defined(BACKLIGHT_CONTROL) && defined(TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY))
     int numChangedPixels = framebufferHasNewChangedPixels ? CountNumChangedPixels(framebuffer[0], framebuffer[1]) : 0;
@@ -575,7 +593,7 @@ for (int SPI_LOOP=0; SPI_LOOP<NUM_CS_LOOPS;SPI_LOOP++) { ///////LOOP FOR MULTIPL
     statsBytesTransferred += bytesTransferred;
 #endif
 
-  }//////////////////////////////////////////////END LOOP FOR BOTH DISPLAYS
+  //}//////////////////////////////////////////////END LOOP FOR BOTH DISPLAYS
 
   } // end "while(programRunning)" loop
 
