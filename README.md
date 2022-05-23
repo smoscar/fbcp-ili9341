@@ -85,6 +85,7 @@ The following LCD displays have been tested:
  - [Arduino A000096 1.77" 160x128 LCD Screen](https://store.arduino.cc/arduino-lcd-screen) with ST7735R controller
  - [Tontec 3.5" 320x480 LCD Display](https://www.ebay.com/p/Tontec-3-5-Inches-Touch-Screen-for-Raspberry-Pi-Display-TFT-Monitor-480x320-LCD/1649448059) with MZ61581-PI-EXT 2016.1.28 controller
  - [Adafruit 1.54" 240x240 Wide Angle TFT LCD Display with MicroSD](https://www.adafruit.com/product/3787) with ST7789 controller
+ - [Pirate Audio 240x240, 1.3inch IPS LCD display HAT for Raspberry Pi](https://shop.pimoroni.com/collections/pirate-audio) with ST7789 controller
  - [WaveShare 240x240, 1.3inch IPS LCD display HAT for Raspberry Pi](https://www.waveshare.com/1.3inch-lcd-hat.htm) with ST7789VW controller
  - [WaveShare 128x128, 1.44inch LCD display HAT for Raspberry Pi](https://www.waveshare.com/1.44inch-lcd-hat.htm) with ST7735S controller
  - [KeDei 3.5 inch SPI TFTLCD 480*320 16bit/18bit version 6.3 2018/4/9](https://github.com/juj/fbcp-ili9341/issues/40) with MPI3501 controller
@@ -139,6 +140,7 @@ When using one of the displays that stack on top of the Pi that are already reco
 - `-DFREEPLAYTECH_WAVESHARE32B=ON`: If you are running on the [Freeplay CM3 or Zero](https://www.freeplaytech.com/product/freeplay-cm3-diy-kit/) device, pass this flag. (this is not a hat, but still a preconfigured pin assignment)
 - `-DWAVESHARE35B_ILI9486=ON`: If specified, targets a [Waveshare 3.5" 480x320 ILI9486](https://www.amazon.co.uk/dp/B01N48NOXI/ref=pe_3187911_185740111_TE_item) display.
 - `-DTONTEC_MZ61581=ON`: If you are running on the [Tontec 3.5" 320x480 LCD Display](https://www.ebay.com/p/Tontec-3-5-Inches-Touch-Screen-for-Raspberry-Pi-Display-TFT-Monitor-480x320-LCD/1649448059) display, pass this.
+- `-DPIRATE_AUDIO_ST7789_HAT=ON`: If specified, targets a [Pirate Audio 240x240, 1.3inch IPS LCD display HAT for Raspberry Pi](https://shop.pimoroni.com/collections/pirate-audio) with ST7789 display controller
 - `-DWAVESHARE_ST7789VW_HAT=ON`: If specified, targets a [240x240, 1.3inch IPS LCD display HAT for Raspberry Pi](https://www.waveshare.com/1.3inch-lcd-hat.htm) with ST7789VW display controller.
 - `-DWAVESHARE_ST7735S_HAT=ON`: If specified, targets a [128x128, 1.44inch LCD display HAT for Raspberry Pi](https://www.waveshare.com/1.3inch-lcd-hat.htm) with ST7735S display controller.
 - `-DKEDEI_V63_MPI3501=ON`: If specified, targets a [KeDei 3.5 inch SPI TFTLCD 480*320 16bit/18bit version 6.3 2018/4/9](https://github.com/juj/fbcp-ili9341/issues/40) display with MPI3501 display controller.
@@ -181,7 +183,7 @@ There are a couple of options to explicitly say which Pi board you want to targe
 - `-DSINGLE_CORE_BOARD=ON`: Pass this option if you are running on a Pi that has only one hardware thread (Pi Model A, Pi Model B, Compute Module 1, Pi Zero/Zero W). If not present, autodetected.
 - `-DARMV6Z=ON`: Pass this option to specifically optimize for ARMv6Z instruction set (Pi 1A, 1A+, 1B, 1B+, Zero, Zero W). If not present, autodetected.
 - `-DARMV7A=ON`: Pass this option to specifically optimize for ARMv7-A instruction set (Pi 2B < rev 1.2). If not present, autodetected.
-- `-DARMV8A=ON`: Pass this option to specifically optimize for ARMv8-A instruction set (Pi 2B >= rev. 1.2, 3B, 3B+, CM3, CM3 lite or 4B). If not present, autodetected.
+- `-DARMV8A=ON`: Pass this option to specifically optimize for ARMv8-A instruction set (Pi 2B >= rev. 1.2, 3B, 3B+, CM3, CM3 lite, 4B, CM4, Pi400). If not present, autodetected.
 
 ###### Specifying other build options
 
@@ -411,9 +413,17 @@ The `fbcp` part in the name means *framebuffer copy*; specifically for the ILI93
 
 Yes, it does, although not quite as well as on Pi 3B. If you'd like it to run better on a Pi Zero, leave a thumbs up at https://github.com/raspberrypi/userland/issues/440 - hard problems are difficult to justify prioritizing unless it is known that many people care about them.
 
+#### The driver works well, but image is rotated 90 degrees. How do I rotate the display between landscape and portrait?
+
+Edit the file `config.h` and comment out the line `#define DISPLAY_OUTPUT_LANDSCAPE`. This will make the display output in portrait mode, effectively rotating it by 90 degrees. Note that this only affects the pixel memory reading mode of the display. It is not possible to change the panel scan order to run between landscape and portrait, the SPI displays typically always scan in portrait mode. The result is that it will change the panel vsync tearing mode from "straight line tearing" over to "diagonal tearing" (see the section About Tearing above).
+
+If you do not want to have diagonal tearing, but would prefer straight line tearing, then additionally enable the option `#define DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE` in `config.h`. That will restore straight line tearing, but it will also increase overall CPU consumption.
+
 #### The driver works well, but image is upside down. How do I rotate the display?
 
 Enable the option `#define DISPLAY_ROTATE_180_DEGREES` in `config.h`. This should rotate the SPI display to show up the other way around, while keeping the HDMI connected display orientation unchanged. Another option is to utilize a `/boot/config.txt` option [display_rotate=2](https://www.raspberrypi.org/forums/viewtopic.php?t=120793), which rotates both the SPI output and the HDMI output.
+
+Note that the setting `DISPLAY_ROTATE_180_DEGREES` only affects the pixel memory reading mode of the display. It is not possible to flip the panel scan to run inverted by 180 degrees. This means that adjusting these settings will also have effects of changing the visual appearance of the vsync tearing artifact. If you have the ability to mount the display 180 degrees around in your project, it is recommended to do that instead of using the `DISPLAY_ROTATE_180_DEGREES` option.
 
 #### How exactly do I edit the build options to e.g. remove the statistics lines or change some other option?
 
