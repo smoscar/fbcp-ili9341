@@ -247,4 +247,4 @@
 #else
 	#define NUM_CS_LOOPS 1
 #endif
-uint32_t CS_TARGET = 0;
+uint32_t CS_TARGET = 3; //1 for CE0, 2 for CE1, 3 for both
