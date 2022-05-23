@@ -88,29 +88,35 @@ void UpdateStatisticsNumbers()
 
 void DrawStatisticsOverlay(uint16_t *framebuffer)
 {
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, fpsText, 1, 1, fpsColor, 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, statsFrameSkipText, strlen(fpsText)*6, 1, RGB565(31,0,0), 0);
+    int textStartAddX = 0;
+    int textStartAddY = 0;
+#ifdef GC9307 //circular display, so text gets cut off if drawn in the corners. Draw closer to the center instead
+    textStartAddX = 9;
+    textStartAddY = 109;
+#endif
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, fpsText, textStartAddX+1, textStartAddY+1, fpsColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, statsFrameSkipText, textStartAddX + (strlen(fpsText)*6), textStartAddY+1, RGB565(31,0,0), 0);
 
-#if DISPLAY_DRAWABLE_WIDTH > 130
+#if DISPLAY_DRAWABLE_WIDTH > (textStartAddX+130)
 #ifdef USE_DMA_TRANSFERS
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, dmaChannelsText, 1, 10, RGB565(31, 44, 8), 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, dmaChannelsText, textStartAddX+1, textStartAddY+10, RGB565(31, 44, 8), 0);
 #endif
 #ifdef USE_SPI_THREAD
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiUsagePercentageText, 75, 10, spiUsageColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiUsagePercentageText, textStartAddX+75, textStartAddY+10, spiUsageColor, 0);
 #endif
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiBusDataRateText, 60, 1, 0xFFFF, 0);
-#endif
-
-#if DISPLAY_DRAWABLE_WIDTH > 180
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiSpeedText, 120, 1, RGB565(31,14,20), 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiSpeedText2, 120, 10, RGB565(10,24,31), 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, cpuTemperatureText, 190, 1, cpuTemperatureColor, 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, gpuPollingWastedText, 222, 1, gpuPollingWastedColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiBusDataRateText, textStartAddX+60, textStartAddY+1, 0xFFFF, 0);
 #endif
 
-#if (defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_HEIGHT >= 290) || (!defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_WIDTH >= 290)
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, cpuMemoryUsedText, 250, 1, RGB565(31,50,21), 0);
-  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, gpuMemoryUsedText, 250, 10, RGB565(31,50,31), 0);
+#if DISPLAY_DRAWABLE_WIDTH > (textStartAddX+180)
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiSpeedText, textStartAddX+120, textStartAddY+1, RGB565(31,14,20), 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, spiSpeedText2, textStartAddX+120, textStartAddY+10, RGB565(10,24,31), 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, cpuTemperatureText, textStartAddX+190, textStartAddY+1, cpuTemperatureColor, 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, gpuPollingWastedText, textStartAddX+222, textStartAddY+1, gpuPollingWastedColor, 0);
+#endif
+
+#if (defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_HEIGHT >= (textStartAddX+290)) || (!defined(DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE) && DISPLAY_DRAWABLE_WIDTH >= (textStartAddX+290))
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, cpuMemoryUsedText, textStartAddX+250, textStartAddY+1, RGB565(31,50,21), 0);
+  DrawText(framebuffer, gpuFrameWidth, gpuFramebufferScanlineStrideBytes, gpuFrameHeight/2, gpuMemoryUsedText, textStartAddX+250, textStartAddY+10, RGB565(31,50,31), 0);
 #endif
 
 #ifdef FRAME_COMPLETION_TIME_STATISTICS

@@ -184,8 +184,8 @@ int main()
     // at this point, a new frame has just been loaded    
 
     bool spiThreadWasWorkingHardBefore = false;
-for (int SPI_LOOP=0; SPI_LOOP<NUM_CS_LOOPS;SPI_LOOP++) { //////////////////////////////////////////////LOOP FOR BOTH DISPLAYS?
-    CS_TARGET = SPI_LOOP;
+for (int SPI_LOOP=0; SPI_LOOP<NUM_CS_LOOPS;SPI_LOOP++) { ///////LOOP FOR MULTIPLE DISPLAYS?
+    uint32_t CS_TARGET = SPI_LOOP;
 
     // At all times keep at most two rendered frames in the SPI task queue pending to be displayed. Only proceed to submit a new frame
     // to the task queue once the older of those has been displayed.
