@@ -11,13 +11,12 @@ This fork (currently early in development) is intended to accomplish 2 new thing
 1) GC9307 display support tested and (basically) working! 
    - Custom GC9307 display files added (GC9307.h and GC9307.cpp)
    - GC9307 files are included if build option -GC9307 is used (CMakeLists.txt,  display.cpp). 
+   - There might be some small issue with spans being misaligned ot missed entirely - some pixels don't seem to update on occasion
 
 2) Functionality for 2 displays still early in development:
-   - Added build options to define CS_COPY and CS_SPLIT (in CMakeLists.txt), where CS_COPY will send full copies of the source video twice over SPI - once with CE0 enabled and        the other with CE1 enabled - and CS_SPLIT will split the source into top and bottom halves, sending the top half with CE0 enabled and bottom half with CE1 enabled. CS_COPY      is really only being developed for intermediate testing purposes (if you wanted to always show the same thing on both displays, connect them both to CE0).
-   - initialized CS_TARGET=0 (for CE0) in spi.h, to be used to toggle between CE0 and CE1 in the SPI register
-   - added CS_TARGET into (hopefully) all relevent fields where SPI register is controlled (spi.h, spi.cpp, dma.cpp, bcm2835_spi_display)
-   - Where display is inititialized (spi.cpp), if either CS_COPY or CS_SPLIT is defined, the display is initialized twice - once for each chip select.
-   - Up next: when a frame is sent over SPI, send it twice - once for each chip select. Are there any other SPI tasks I have to do the same thing with?
+   - added CS_BIT into (hopefully) all relevent fields where SPI register is controlled (spi.h, spi.cpp, dma.cpp, bcm2835_spi_display)
+   - added csBit as member of SPITask, to hopefully be able to set the cs on a task-by-task basis
+   - where the display is inititialized, if NUM_DISPLAY_LOOPS = 2, the display is initialized twice - once for each chip select.
 
 ### Now back to the original README...
 
