@@ -120,6 +120,8 @@ typedef struct __attribute__((packed)) SPITask
   uint8_t *prevFb;
   uint16_t width;
 #endif
+  bool csBit;
+  
   uint8_t data[]; // Contains both 8-bit and 9-bit tasks back to back, 8-bit first, then 9-bit.
 
 #ifdef SPI_3WIRE_PROTOCOL
@@ -136,15 +138,15 @@ typedef struct __attribute__((packed)) SPITask
 
 } SPITask;
 
-#define BEGIN_SPI_COMMUNICATION() do { spi->cs = BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET; } while(0)
-#define END_SPI_COMMUNICATION()  do { \
+#define BEGIN_SPI_COMMUNICATION(CS_BIT) do { spi->cs = BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT; } while(0)
+#define END_SPI_COMMUNICATION(CS_BIT)  do { \
     uint32_t cs; \
     while (!(((cs = spi->cs) ^ BCM2835_SPI0_CS_TA) & (BCM2835_SPI0_CS_DONE | BCM2835_SPI0_CS_TA ))) /* While TA=1 and DONE=0*/ \
     { \
       if ((cs & (BCM2835_SPI0_CS_RXR | BCM2835_SPI0_CS_RXF))) \
-        spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET; \
+        spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT; \
     } \
-    spi->cs = BCM2835_SPI0_CS_CLEAR_RX | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET; /* Clear TA and any pending bytes */ \
+    spi->cs = BCM2835_SPI0_CS_CLEAR_RX | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT; /* Clear TA and any pending bytes */ \
   } while(0)
 
 #define WAIT_SPI_FINISHED()  do { \
@@ -152,15 +154,15 @@ typedef struct __attribute__((packed)) SPITask
     while (!((cs = spi->cs) & BCM2835_SPI0_CS_DONE)) /* While DONE=0*/ \
     { \
       if ((cs & (BCM2835_SPI0_CS_RXR | BCM2835_SPI0_CS_RXF))) \
-        spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET; \
+        spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT; \
     } \
   } while(0)
 
 
 // A convenience for defining and dispatching SPI task bytes inline
-#define SPI_TRANSFER(command, ...) do { \
+#define SPI_TRANSFER(CS_BIT, command, ...) do { \
     char data_buffer[] = { __VA_ARGS__ }; \
-    SPITask *t = AllocTask(sizeof(data_buffer)); \
+    SPITask *t = AllocTask(CS_BIT, sizeof(data_buffer)); \
     t->cmd = (command); \
     memcpy(t->data, data_buffer, sizeof(data_buffer)); \
     CommitTask(t); \
@@ -168,9 +170,9 @@ typedef struct __attribute__((packed)) SPITask
     DoneTask(t); \
   } while(0)
 
-#define QUEUE_SPI_TRANSFER(command, ...) do { \
+#define QUEUE_SPI_TRANSFER(CS_BIT, command, ...) do { \
     char data_buffer[] = { __VA_ARGS__ }; \
-    SPITask *t = AllocTask(sizeof(data_buffer)); \
+    SPITask *t = AllocTask(CS_BIT, sizeof(data_buffer)); \
     t->cmd = (command); \
     memcpy(t->data, data_buffer, sizeof(data_buffer)); \
     CommitTask(t); \
@@ -178,8 +180,8 @@ typedef struct __attribute__((packed)) SPITask
 
 #ifdef DISPLAY_SPI_BUS_IS_16BITS_WIDE // For displays that have their command register set be 16 bits word size width (ILI9486)
 
-#define QUEUE_MOVE_CURSOR_TASK(cursor, pos) do { \
-    SPITask *task = AllocTask(4); \
+#define QUEUE_MOVE_CURSOR_TASK(CS_BIT, cursor, pos) do { \
+    SPITask *task = AllocTask(CS_BIT, 4); \
     task->cmd = (cursor); \
     task->data[0] = 0; \
     task->data[1] = (pos) >> 8; \
@@ -189,8 +191,8 @@ typedef struct __attribute__((packed)) SPITask
     CommitTask(task); \
   } while(0)
 
-#define QUEUE_SET_WRITE_WINDOW_TASK(cursor, x, endX) do { \
-    SPITask *task = AllocTask(8); \
+#define QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, cursor, x, endX) do { \
+    SPITask *task = AllocTask(CS_BIT, 8); \
     task->cmd = (cursor); \
     task->data[0] = 0; \
     task->data[1] = (x) >> 8; \
@@ -206,8 +208,8 @@ typedef struct __attribute__((packed)) SPITask
 
 #elif defined(DISPLAY_SET_CURSOR_IS_8_BIT) // For displays that have their set cursor commands be a uint8 instead of uint16 (SSD1351)
 
-#define QUEUE_SET_WRITE_WINDOW_TASK(cursor, x, endX) do { \
-    SPITask *task = AllocTask(2); \
+#define QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, cursor, x, endX) do { \
+    SPITask *task = AllocTask(CS_BIT, 2); \
     task->cmd = (cursor); \
     task->data[0] = (x); \
     task->data[1] = (endX); \
@@ -217,8 +219,8 @@ typedef struct __attribute__((packed)) SPITask
 
 #else // Regular 8-bit interface with 16bits wide set cursor commands (most displays)
 
-#define QUEUE_MOVE_CURSOR_TASK(cursor, pos) do { \
-    SPITask *task = AllocTask(2); \
+#define QUEUE_MOVE_CURSOR_TASK(CS_BIT, cursor, pos) do { \
+    SPITask *task = AllocTask(CS_BIT, 2); \
     task->cmd = (cursor); \
     task->data[0] = (pos) >> 8; \
     task->data[1] = (pos) & 0xFF; \
@@ -226,8 +228,8 @@ typedef struct __attribute__((packed)) SPITask
     CommitTask(task); \
   } while(0)
 
-#define QUEUE_SET_WRITE_WINDOW_TASK(cursor, x, endX) do { \
-    SPITask *task = AllocTask(4); \
+#define QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, cursor, x, endX) do { \
+    SPITask *task = AllocTask(CS_BIT, 4); \
     task->cmd = (cursor); \
     task->data[0] = (x) >> 8; \
     task->data[1] = (x) & 0xFF; \
@@ -286,7 +288,7 @@ uint32_t NumBytesNeededFor32BitSPITask(uint32_t byteSizeFor8BitTask);
 
 #endif
 
-static inline SPITask *AllocTask(uint32_t bytes) // Returns a pointer to a new SPI task block, called on main thread
+static inline SPITask *AllocTask(bool CS_BIT, uint32_t bytes) // Returns a pointer to a new SPI task block, called on main thread
 {
 #ifdef SPI_3WIRE_PROTOCOL
   // For 3-wire/9-bit tasks, store the converted task right at the end of the 8-bit task.
@@ -354,6 +356,7 @@ static inline SPITask *AllocTask(uint32_t bytes) // Returns a pointer to a new S
   task->fb = &task->data[0];
   task->prevFb = 0;
 #endif
+  task->csBit = CS_BIT;
   return task;
 }
 

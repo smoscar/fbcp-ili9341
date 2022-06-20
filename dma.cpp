@@ -513,6 +513,8 @@ void SPIDMATransfer(SPITask *task)
   volatile DMAControlBlock *tx0 = &cb[0];
   volatile DMAControlBlock *rx0 = &cb[1];
 
+  bool CS_BIT = task->csBit;
+
 #ifdef OFFLOAD_PIXEL_COPY_TO_DMA_CPP
   uint8_t *data = task->fb;
   uint8_t *prevData = task->prevFb;
@@ -523,14 +525,14 @@ void SPIDMATransfer(SPITask *task)
 
   int bytesLeft = task->PayloadSize();
   int taskStartX = 0;
-
+  
   while(bytesLeft > 0)
   {
     int sendSize = MIN(bytesLeft, MAX_DMA_SPI_TASK_SIZE);
     bytesLeft -= sendSize;
 
     volatile DMAControlBlock *tx = cb++;
-    txData[0] = BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | (sendSize << 16); // The first four bytes written to the SPI data register control the DLEN and CS,CPOL,CPHA settings.
+    txData[0] = BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT | (sendSize << 16); // The first four bytes written to the SPI data register control the DLEN and CS,CPOL,CPHA settings.
     // This is really sad: we must do a memcpy to prepare for DMA controller to be able to do a memcpy. The reason for this is that the DMA source memory area must be in cache bypassing
     // region of memory, which the SPI source ring buffer is not. It could be allocated to be so however, but bypassing the caches on the SPI ring buffer would cause a massive -51.5%
     // profiled overall performance drop (tested on Pi3B+ and Tontec 3.5" 480x320 display on gpu test pattern, see branch non_intermediate_memcpy_for_dma). Therefore just keep doing
@@ -638,7 +640,7 @@ void SPIDMATransfer(SPITask *task)
   pendingTaskBytes = task->PayloadSize();
 
   // First send the SPI command byte in Polled SPI mode
-  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT;
 
 #ifndef SPI_3WIRE_PROTOCOL
   CLEAR_GPIO(GPIO_TFT_DATA_CONTROL);
@@ -657,7 +659,7 @@ void SPIDMATransfer(SPITask *task)
   SET_GPIO(GPIO_TFT_DATA_CONTROL);
 #endif
 
-  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT;
 
   dmaTx->cbAddr = VIRT_TO_BUS(dmaCb, tx0);
   dmaRx->cbAddr = VIRT_TO_BUS(dmaCb, rx0);
@@ -672,9 +674,11 @@ void SPIDMATransfer(SPITask *task)
 void SPIDMATransfer(SPITask *task)
 {
   // Transition the SPI peripheral to enable the use of DMA
-  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+  bool CS_BIT = task->csBit;
+
+  spi->cs = BCM2835_SPI0_CS_DMAEN | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT;
   uint32_t *headerAddr = task->DmaSpiHeaderAddress();
-  *headerAddr = BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | (task->PayloadSize() << 16); // The first four bytes written to the SPI data register control the DLEN and CS,CPOL,CPHA settings.
+  *headerAddr = BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT | (task->PayloadSize() << 16); // The first four bytes written to the SPI data register control the DLEN and CS,CPOL,CPHA settings.
 
   // TODO: Ideally we would be able to directly perform the DMA from the SPI ring buffer from 'task' pointer. However
   // that pointer is shared to userland, and it is proving troublesome to make it both userland-writable as well as cache-bypassing DMA coherent.
@@ -731,7 +735,7 @@ void SPIDMATransfer(SPITask *task)
   }
 
   __sync_synchronize();
-  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+  spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT;
   __sync_synchronize();
 }
 

@@ -1,5 +1,13 @@
 #pragma once
 
+#define NUM_DISPLAY_LOOPS 2
+#define gc9307
+#define TARGET_FRAME_RATE 60
+#define DOUBLE_DISPLAY
+#define NUM_DISPLAY_LOOPS 2
+//////////lots more to define
+
+
 // Build options: Uncomment any of these, or set at the command line to configure:
 
 // If defined, renders a performance overlay on top of the screen. This option is passed from CMake
@@ -247,4 +255,3 @@
 #else
 	#define NUM_CS_LOOPS 1
 #endif
-uint32_t CS_TARGET = 3; //1 for CE0, 2 for CE1, 3 for both

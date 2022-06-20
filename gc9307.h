@@ -12,8 +12,8 @@
 #define DISPLAY_NATIVE_HEIGHT 210
 
 // Not sure what this does
-#define DISPLAY_NATIVE_COVERED_LEFT_SIDE 2
-#define DISPLAY_NATIVE_COVERED_TOP_SIDE 1
+#define DISPLAY_NATIVE_COVERED_LEFT_SIDE 0
+#define DISPLAY_NATIVE_COVERED_TOP_SIDE 0
 
 //definine init function
 #define InitSPIDisplay InitGC9307
@@ -22,7 +22,7 @@ void InitGC9307(void);
 void TurnDisplayOn(void);
 void TurnDisplayOff(void);
 
-// Not needed
+// Defined in config file
 //#define DISPLAY_NEEDS_CHIP_SELECT_SIGNAL
 
 #endif

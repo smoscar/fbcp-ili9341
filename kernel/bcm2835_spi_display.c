@@ -115,16 +115,19 @@ static irqreturn_t irq_handler(int irq, void* dev_id)
 {
 #ifndef KERNEL_MODULE_CLIENT_DRIVES
   uint32_t cs = spi->cs;
+  bool CS_BIT = 0;
   if (!taskNextByte)
   {
     if (currentTask) DoneTask((SPITask*)currentTask);
     currentTask = GetTask();
     if (!currentTask)
     {
-      spi->cs = (cs & ~BCM2835_SPI0_CS_TA) | BCM2835_SPI0_CS_CLEAR | CS_TARGET; ///////////////////////not sure if CS_TARGET goes here...
+      spi->cs = (cs & ~BCM2835_SPI0_CS_TA) | BCM2835_SPI0_CS_CLEAR;
       return IRQ_HANDLED;
     }
-
+	CS_BIT = currentTask->csBit;
+	cs = (cs & !BCM2835_SPI0_CS_CS) | CS_BIT;
+	spi->cs = cs;
     if ((cs & (BCM2835_SPI0_CS_RXF|BCM2835_SPI0_CS_RXR))) (void)spi->fifo;
     while (!(spi->cs & BCM2835_SPI0_CS_DONE))
     {
@@ -294,11 +297,12 @@ void DMATest()
 void PumpSPI(void)
 {
 #ifdef KERNEL_DRIVE_WITH_IRQ
-  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD | CS_TARGET; // Initialize the Control and Status register to defaults: CS=0 (Chip Select), CPHA=0 (Clock Phase), CPOL=0 (Clock Polarity), CSPOL=0 (Chip Select Polarity), TA=0 (Transfer not active), and reset TX and RX queues.
+  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD; // Initialize the Control and Status register to defaults: CS=0 (Chip Select), CPHA=0 (Clock Phase), CPOL=0 (Clock Polarity), CSPOL=0 (Chip Select Polarity), TA=0 (Transfer not active), and reset TX and RX queues.
 #else
   if (spiTaskMemory->queueTail != spiTaskMemory->queueHead)
   {
-    BEGIN_SPI_COMMUNICATION();
+	bool CS_BIT = 0;
+    BEGIN_SPI_COMMUNICATION(CS_BIT);
     {
       int i = 0;
       while(spiTaskMemory->queueTail != spiTaskMemory->queueHead)
@@ -308,6 +312,12 @@ void PumpSPI(void)
         SPITask *task = GetTask();
         if (task)
         {
+		  if (CS_BIT != task->csBit) 
+		  {
+			END_SPI_COMMUNICATION(CS_BIT);
+			CS_BIT = ~CS_BIT;
+			BEGIN_SPI_COMMUNICATION(CS_BIT);
+		  }
           RunSPITask(task);
           DoneTask(task);
         }
@@ -315,7 +325,7 @@ void PumpSPI(void)
           break;
       }
     }
-    END_SPI_COMMUNICATION();
+    END_SPI_COMMUNICATION(CS_BIT);
   }
 #endif
 }
@@ -336,12 +346,6 @@ static int display_initialization_thread(void *unused)
 
 #ifndef KERNEL_MODULE_CLIENT_DRIVES
 
-  // Initialize display. TODO: Move to be shared with ili9341.cpp.
-  QUEUE_SPI_TRANSFER(0xC0/*Power Control 1*/, 0x23/*VRH=4.60V*/); // Set the GVDD level, which is a reference level for the VCOM level and the grayscale voltage level.
-  QUEUE_SPI_TRANSFER(0xC1/*Power Control 2*/, 0x10/*AVCC=VCIx2,VGH=VCIx7,VGL=-VCIx4*/); // Sets the factor used in the step-up circuits. To reduce power consumption, set a smaller factor.
-  QUEUE_SPI_TRANSFER(0xC5/*VCOM Control 1*/, 0x3e/*VCOMH=4.250V*/, 0x28/*VCOML=-1.500V*/); // Adjusting VCOM 1 and 2 can control display brightness
-  QUEUE_SPI_TRANSFER(0xC7/*VCOM Control 2*/, 0x86/*VCOMH=VMH-58,VCOML=VML-58*/);
-
 #define MADCTL_ROW_COLUMN_EXCHANGE (1<<5)
 #define MADCTL_BGR_PIXEL_ORDER (1<<3)
 #define MADCTL_ROTATE_180_DEGREES (MADCTL_COLUMN_ADDRESS_ORDER_SWAP | MADCTL_ROW_ADDRESS_ORDER_SWAP)
@@ -350,28 +354,40 @@ static int display_initialization_thread(void *unused)
   madctl |= MADCTL_ROW_COLUMN_EXCHANGE;
 #endif
 #ifdef DISPLAY_ROTATE_180_DEGREES
-    madctl ^= MADCTL_ROTATE_180_DEGREES;
+  madctl ^= MADCTL_ROTATE_180_DEGREES;
 #endif
-  QUEUE_SPI_TRANSFER(0x36/*MADCTL: Memory Access Control*/, madctl);
-  QUEUE_SPI_TRANSFER(0x3A/*COLMOD: Pixel Format Set*/, 0x55/*DPI=16bits/pixel,DBI=16bits/pixel*/);
-  QUEUE_SPI_TRANSFER(0xB1/*Frame Rate Control (In Normal Mode/Full Colors)*/, 0x00/*DIVA=fosc*/, 0x18/*RTNA(Frame Rate)=79Hz*/);
-  QUEUE_SPI_TRANSFER(0xB6/*Display Function Control*/, 0x08/*PTG=Interval Scan,PT=V63/V0/VCOML/VCOMH*/, 0x82/*REV=1(Normally white),ISC(Scan Cycle)=5 frames*/, 0x27/*LCD Driver Lines=320*/);
-  QUEUE_SPI_TRANSFER(0x26/*Gamma Set*/, 0x01/*Gamma curve 1 (G2.2)*/);
-  QUEUE_SPI_TRANSFER(0xE0/*Positive Gamma Correction*/, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00);
-  QUEUE_SPI_TRANSFER(0xE1/*Negative Gamma Correction*/, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F);
-  QUEUE_SPI_TRANSFER(0x11/*Sleep Out*/);
+
+  bool CS_BIT = 0;
+  for (uint8_t DISPLAY_LOOP; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, CS_BIT = !CS_BIT)
+  {
+  printk(KERN_INFO "Initializing display in SPI Display driver thread");
+  
+  // Initialize display. TODO: Move to be shared with ili9341.cpp.
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xC0/*Power Control 1*/, 0x23/*VRH=4.60V*/); // Set the GVDD level, which is a reference level for the VCOM level and the grayscale voltage level.
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xC1/*Power Control 2*/, 0x10/*AVCC=VCIx2,VGH=VCIx7,VGL=-VCIx4*/); // Sets the factor used in the step-up circuits. To reduce power consumption, set a smaller factor.
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xC5/*VCOM Control 1*/, 0x3e/*VCOMH=4.250V*/, 0x28/*VCOML=-1.500V*/); // Adjusting VCOM 1 and 2 can control display brightness
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xC7/*VCOM Control 2*/, 0x86/*VCOMH=VMH-58,VCOML=VML-58*/);
+
+  QUEUE_SPI_TRANSFER(CS_BIT, 0x36/*MADCTL: Memory Access Control*/, madctl);
+  QUEUE_SPI_TRANSFER(CS_BIT, 0x3A/*COLMOD: Pixel Format Set*/, 0x55/*DPI=16bits/pixel,DBI=16bits/pixel*/);
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xB1/*Frame Rate Control (In Normal Mode/Full Colors)*/, 0x00/*DIVA=fosc*/, 0x18/*RTNA(Frame Rate)=79Hz*/);
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xB6/*Display Function Control*/, 0x08/*PTG=Interval Scan,PT=V63/V0/VCOML/VCOMH*/, 0x82/*REV=1(Normally white),ISC(Scan Cycle)=5 frames*/, 0x27/*LCD Driver Lines=320*/);
+  QUEUE_SPI_TRANSFER(CS_BIT, 0x26/*Gamma Set*/, 0x01/*Gamma curve 1 (G2.2)*/);
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xE0/*Positive Gamma Correction*/, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00);
+  QUEUE_SPI_TRANSFER(CS_BIT, 0xE1/*Negative Gamma Correction*/, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F);
+  QUEUE_SPI_TRANSFER(CS_BIT, 0x11/*Sleep Out*/);
 
   PumpSPI();
   msleep(1000);
-  QUEUE_SPI_TRANSFER(/*Display ON*/0x29);
+  QUEUE_SPI_TRANSFER(CS_BIT, /*Display ON*/0x29);
 
 #if 1
   // XXX Debug: Random garbage to verify screen updates working
   for(int y = 0; y < DISPLAY_HEIGHT; ++y)
   {
-    QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_X, 0, 0, DISPLAY_WIDTH >> 8, DISPLAY_WIDTH & 0xFF);
-    QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_Y, y >> 8, y & 0xFF, DISPLAY_HEIGHT >> 8, DISPLAY_HEIGHT & 0xFF);
-    SPITask *clearLine = AllocTask(DISPLAY_SCANLINE_SIZE);
+    QUEUE_SPI_TRANSFER(CS_BIT, DISPLAY_SET_CURSOR_X, 0, 0, DISPLAY_WIDTH >> 8, DISPLAY_WIDTH & 0xFF);
+    QUEUE_SPI_TRANSFER(CS_BIT, DISPLAY_SET_CURSOR_Y, y >> 8, y & 0xFF, DISPLAY_HEIGHT >> 8, DISPLAY_HEIGHT & 0xFF);
+    SPITask *clearLine = AllocTask(CS_BIT, DISPLAY_SCANLINE_SIZE);
     clearLine->cmd = DISPLAY_WRITE_PIXELS;
     clearLine->size = DISPLAY_SCANLINE_SIZE;
     for(int i = 0; i < DISPLAY_SCANLINE_SIZE; ++i)
@@ -385,9 +401,9 @@ static int display_initialization_thread(void *unused)
   // Initial screen clear
   for(int y = 0; y < DISPLAY_HEIGHT; ++y)
   {
-    QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_X, 0, 0, DISPLAY_WIDTH >> 8, DISPLAY_WIDTH & 0xFF);
-    QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_Y, y >> 8, y & 0xFF, DISPLAY_HEIGHT >> 8, DISPLAY_HEIGHT & 0xFF);
-    SPITask *clearLine = AllocTask(DISPLAY_SCANLINE_SIZE);
+    QUEUE_SPI_TRANSFER(CS_BIT, DISPLAY_SET_CURSOR_X, 0, 0, DISPLAY_WIDTH >> 8, DISPLAY_WIDTH & 0xFF);
+    QUEUE_SPI_TRANSFER(CS_BIT, DISPLAY_SET_CURSOR_Y, y >> 8, y & 0xFF, DISPLAY_HEIGHT >> 8, DISPLAY_HEIGHT & 0xFF);
+    SPITask *clearLine = AllocTask(CS_BIT, DISPLAY_SCANLINE_SIZE);
     clearLine->cmd = DISPLAY_WRITE_PIXELS;
     clearLine->size = DISPLAY_SCANLINE_SIZE;
     memset((void*)clearLine->data, 0, DISPLAY_SCANLINE_SIZE);
@@ -395,14 +411,16 @@ static int display_initialization_thread(void *unused)
   }
   PumpSPI();
 
-  QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_X, 0, 0, DISPLAY_WIDTH >> 8, DISPLAY_WIDTH & 0xFF);
-  QUEUE_SPI_TRANSFER(DISPLAY_SET_CURSOR_Y, 0, 0, DISPLAY_HEIGHT >> 8, DISPLAY_HEIGHT & 0xFF);
+  QUEUE_SPI_TRANSFER(CS_BIT, DISPLAY_SET_CURSOR_X, 0, 0, DISPLAY_WIDTH >> 8, DISPLAY_WIDTH & 0xFF);
+  QUEUE_SPI_TRANSFER(CS_BIT, DISPLAY_SET_CURSOR_Y, 0, 0, DISPLAY_HEIGHT >> 8, DISPLAY_HEIGHT & 0xFF);
 
-  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD | CS_TARGET;
+  spi->cs = BCM2835_SPI0_CS_CLEAR | BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_INTR | BCM2835_SPI0_CS_INTD | CS_BIT;
 #endif
 
   PumpSPI();
-
+  
+  } //end DISPLAY LOOP
+  
   // Expose SPI worker ring bus to user space driver application.
   proc_create(SPI_BUS_PROC_ENTRY_FILENAME, 0, NULL, &fops);
 

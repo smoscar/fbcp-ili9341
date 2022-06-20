@@ -127,11 +127,16 @@ int main()
   size *= 2;
 #endif
 
-#ifdef CS_SPLIT //pre-allocate space to store half of the framebuffer
+#ifdef DOUBLE_DISPLAY   //pre-allocate space to store 2 halves of the framebuffer
   int halfsize = size / 2;
-  uint16_t* halfframebuffer[2] = { (uint16_t*)Malloc(halfsize, "main() halfframebuffer0"), (uint16_t*)Malloc(gpuFramebufferSizeBytes/2, "main() halfframebuffer1") };
-  memset(halfframebuffer[0], 0, halfsize);
-  memset(halfframebuffer[1], 0, gpuFramebufferSizeBytes/2);
+  uint16_t* leftframebuffer[2] = { (uint16_t*)Malloc(halfsize, "main() leftframebuffer0"), (uint16_t*)Malloc(gpuFramebufferSizeBytes / 2, "main() leftframebuffer1") };
+  memset(leftframebuffer[0], 0, halfsize);
+  memset(leftframebuffer[1], 0, gpuFramebufferSizeBytes / 2);
+
+  uint16_t* rightframebuffer[2] = { (uint16_t*)Malloc(halfsize, "main() rightframebuffer0"), (uint16_t*)Malloc(gpuFramebufferSizeBytes / 2, "main() rightframebuffer1") };
+  memset(rightframebuffer[0], 0, halfsize);
+  memset(rightframebuffer[1], 0, gpuFramebufferSizeBytes / 2);
+  /////////todo: delete unused framebuffer[1]?
 #endif
 
   uint16_t *framebuffer[2] = { (uint16_t *)Malloc(size, "main() framebuffer0"), (uint16_t *)Malloc(gpuFramebufferSizeBytes, "main() framebuffer1") };
@@ -152,10 +157,13 @@ int main()
   OpenKeyboard();
 
 
-
+  bool CS_BIT = 0;
   printf("All initialized, now running main loop...\n");
   while(programRunning)
   {
+    ////////TESTING
+    for (DISPLAY_LOOP = 0; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, CS_BIT = !CS_BIT)
+    {
     prevFrameWasInterlacedUpdate = interlacedUpdate;
 
     // If last update was interlaced, it means we still have half of the image pending to be updated. In such a case,
@@ -352,11 +360,6 @@ int main()
 #endif
     const double tooMuchToUpdateUsecs = timesliceToUseForScreenUpdates / desiredTargetFps; // If updating the current and new frame takes too many frames worth of allotted time, drop to interlacing.
 
-
-    //for (uint32_t SPI_LOOP = 0; SPI_LOOP < NUM_CS_LOOPS; SPI_LOOP++) { ///////LOOP FOR MULTIPLE DISPLAYS?
-    //    CS_TARGET = SPI_LOOP;
-        /////split framebuffer into left and right halves before calculating numChangedPixels,diffing,sending
-
 #if !defined(NO_INTERLACING) || (defined(BACKLIGHT_CONTROL) && defined(TURN_DISPLAY_OFF_AFTER_USECS_OF_INACTIVITY))
     int numChangedPixels = framebufferHasNewChangedPixels ? CountNumChangedPixels(framebuffer[0], framebuffer[1]) : 0;
 #endif
@@ -430,9 +433,9 @@ int main()
 #endif
       {
 #if defined(MUST_SEND_FULL_CURSOR_WINDOW) || defined(ALIGN_TASKS_FOR_DMA_TRANSFERS)
-        QUEUE_SET_WRITE_WINDOW_TASK(DISPLAY_SET_CURSOR_Y, displayYOffset + i->y, displayYOffset + gpuFrameHeight - 1);
+        QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, DISPLAY_SET_CURSOR_Y, displayYOffset + i->y, displayYOffset + gpuFrameHeight - 1);
 #else
-        QUEUE_MOVE_CURSOR_TASK(DISPLAY_SET_CURSOR_Y, displayYOffset + i->y);
+        QUEUE_MOVE_CURSOR_TASK(CS_BIT, DISPLAY_SET_CURSOR_Y, displayYOffset + i->y);
 #endif
         IN_SINGLE_THREADED_MODE_RUN_TASK();
         spiY = i->y;
@@ -440,7 +443,7 @@ int main()
 
       if (i->endY > i->y + 1 && (spiX != i->x || spiEndX != i->endX)) // Multiline span?
       {
-        QUEUE_SET_WRITE_WINDOW_TASK(DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + i->endX - 1);
+        QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + i->endX - 1);
         IN_SINGLE_THREADED_MODE_RUN_TASK();
         spiX = i->x;
         spiEndX = i->endX;
@@ -450,7 +453,7 @@ int main()
 #ifdef ALIGN_TASKS_FOR_DMA_TRANSFERS
         if (spiX != i->x || spiEndX < i->endX)
         {
-          QUEUE_SET_WRITE_WINDOW_TASK(DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + gpuFrameWidth - 1);
+          QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + gpuFrameWidth - 1);
           IN_SINGLE_THREADED_MODE_RUN_TASK();
           spiX = i->x;
           spiEndX = gpuFrameWidth;
@@ -467,7 +470,7 @@ int main()
               if (j->endX >= i->endX) nextEndX = j->endX;
               break;
             }
-          QUEUE_SET_WRITE_WINDOW_TASK(DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + nextEndX - 1);
+          QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + nextEndX - 1);
           IN_SINGLE_THREADED_MODE_RUN_TASK();
           spiX = i->x;
           spiEndX = nextEndX;
@@ -478,9 +481,9 @@ int main()
 #endif
         {
 #ifdef MUST_SEND_FULL_CURSOR_WINDOW
-          QUEUE_SET_WRITE_WINDOW_TASK(DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + spiEndX - 1);
+          QUEUE_SET_WRITE_WINDOW_TASK(CS_BIT, DISPLAY_SET_CURSOR_X, displayXOffset + i->x, displayXOffset + spiEndX - 1);
 #else
-          QUEUE_MOVE_CURSOR_TASK(DISPLAY_SET_CURSOR_X, displayXOffset + i->x);
+          QUEUE_MOVE_CURSOR_TASK(CS_BIT, DISPLAY_SET_CURSOR_X, displayXOffset + i->x);
 #endif
           IN_SINGLE_THREADED_MODE_RUN_TASK();
           spiX = i->x;
@@ -489,7 +492,7 @@ int main()
       }
 
       // Submit the span pixels
-      SPITask *task = AllocTask(i->size*SPI_BYTESPERPIXEL);
+      SPITask *task = AllocTask(CS_BIT, i->size*SPI_BYTESPERPIXEL);
       task->cmd = DISPLAY_WRITE_PIXELS;
 
       bytesTransferred += task->PayloadSize()+1;
@@ -593,7 +596,7 @@ int main()
     statsBytesTransferred += bytesTransferred;
 #endif
 
-  //}//////////////////////////////////////////////END LOOP FOR BOTH DISPLAYS
+    }//end display loop
 
   } // end "while(programRunning)" loop
 

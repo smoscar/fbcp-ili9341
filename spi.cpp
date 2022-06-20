@@ -255,9 +255,9 @@ void WaitForPolledSPITransferToFinish()
   uint32_t cs;
   while (!(((cs = spi->cs) ^ BCM2835_SPI0_CS_TA) & (BCM2835_SPI0_CS_DONE | BCM2835_SPI0_CS_TA))) // While TA=1 and DONE=0
     if ((cs & (BCM2835_SPI0_CS_RXR | BCM2835_SPI0_CS_RXF)))
-      spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+      spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | (cs & BCM2835_SPI0_CS_CS);
 
-  if ((cs & BCM2835_SPI0_CS_RXD)) spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+  if ((cs & BCM2835_SPI0_CS_RXD)) spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | (cs & BCM2835_SPI0_CS_CS);
 }
 
 #ifdef ALL_TASKS_SHOULD_DMA
@@ -274,6 +274,7 @@ void RunSPITask(SPITask *task)
   uint8_t *tEnd = task->PayloadEnd();
   const uint32_t payloadSize = tEnd - tStart;
   uint8_t *tPrefillEnd = tStart + MIN(15, payloadSize);
+  bool CS_BIT = task->csBit;
 
 #define TASK_SIZE_TO_USE_DMA 4
   // Do a DMA transfer if this task is suitable in size for DMA to handle
@@ -290,7 +291,7 @@ void RunSPITask(SPITask *task)
     if (!previousTaskWasSPI)
     {
       WaitForDMAFinished();
-      spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR_TX | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+      spi->cs = BCM2835_SPI0_CS_TA | BCM2835_SPI0_CS_CLEAR_TX | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT;
       // After having done a DMA transfer, the SPI0 DLEN register has reset to zero, so restore it to fast mode.
       UNLOCK_FAST_8_CLOCKS_SPI();
     }
@@ -327,7 +328,7 @@ void RunSPITask(SPITask *task)
       cs = spi->cs;
       if ((cs & BCM2835_SPI0_CS_TXD)) WRITE_FIFO(*tStart++);
 // TODO:      else asm volatile("yield");
-      if ((cs & (BCM2835_SPI0_CS_RXR|BCM2835_SPI0_CS_RXF))) spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+      if ((cs & (BCM2835_SPI0_CS_RXR|BCM2835_SPI0_CS_RXF))) spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT;
     }
 
     previousTaskWasSPI = true;
@@ -343,8 +344,10 @@ void RunSPITask(SPITask *task)
   // low and high to start a new command. For that display we let hardware SPI toggle the CS line, and actually run TA<-0 and TA<-1
   // transitions to let the CS line live. For most other displays, we just set CS line always enabled for the display throughout fbcp-ili9341 lifetime,
   // which is a tiny bit faster.
+  bool CS_BIT = task->csBit;
+
 #ifdef DISPLAY_NEEDS_CHIP_SELECT_SIGNAL
-  BEGIN_SPI_COMMUNICATION();
+  BEGIN_SPI_COMMUNICATION(CS_BIT);
 #endif
 
   uint8_t *tStart = task->PayloadStart();
@@ -396,12 +399,12 @@ void RunSPITask(SPITask *task)
       uint32_t cs = spi->cs;
       if ((cs & BCM2835_SPI0_CS_TXD)) WRITE_FIFO(*tStart++);
 // TODO:      else asm volatile("yield");
-      if ((cs & (BCM2835_SPI0_CS_RXR|BCM2835_SPI0_CS_RXF))) spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+      if ((cs & (BCM2835_SPI0_CS_RXR|BCM2835_SPI0_CS_RXF))) spi->cs = BCM2835_SPI0_CS_CLEAR_RX | BCM2835_SPI0_CS_TA | DISPLAY_SPI_DRIVE_SETTINGS | CS_BIT;
     }
   }
 
 #ifdef DISPLAY_NEEDS_CHIP_SELECT_SIGNAL
-  END_SPI_COMMUNICATION();
+  END_SPI_COMMUNICATION(CS_BIT);
 #endif
 }
 #endif
@@ -440,7 +443,8 @@ extern volatile bool programRunning;
 void ExecuteSPITasks()
 {
 #ifndef USE_DMA_TRANSFERS
-  BEGIN_SPI_COMMUNICATION();
+  bool CS_BIT = 0;
+  BEGIN_SPI_COMMUNICATION(CS_BIT);
 #endif
   {
     while(programRunning && spiTaskMemory->queueTail != spiTaskMemory->queueHead)
@@ -448,13 +452,21 @@ void ExecuteSPITasks()
       SPITask *task = GetTask();
       if (task)
       {
+#ifndef USE_DMA_TRANSFERS
+        if (CS_BIT ~= task->csBit)
+        {
+          END_SPI_COMMUNICATION(CS_BIT);
+          CS_BIT = != CS_BIT;
+          BEGIN_SPI_COMMUNICATION(CS_BIT);
+        }
+#endif
         RunSPITask(task);
         DoneTask(task);
       }
     }
   }
 #ifndef USE_DMA_TRANSFERS
-  END_SPI_COMMUNICATION();
+  END_SPI_COMMUNICATION(CS_BIT);
 #endif
 }
 
@@ -560,7 +572,7 @@ int InitSPI()
 #endif
 #endif
 
-  spi->cs = BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET; // Initialize the Control and Status register to defaults: CS=0 (Chip Select), CPHA=0 (Clock Phase), CPOL=0 (Clock Polarity), CSPOL=0 (Chip Select Polarity), TA=0 (Transfer not active), and reset TX and RX queues.
+  spi->cs = BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS; // Initialize the Control and Status register to defaults: CS=0 (Chip Select), CPHA=0 (Clock Phase), CPOL=0 (Clock Polarity), CSPOL=0 (Chip Select Polarity), TA=0 (Transfer not active), and reset TX and RX queues.
   spi->clk = SPI_BUS_CLOCK_DIVISOR; // Clock Divider determines SPI bus speed, resulting speed=256MHz/clk
 #endif
 
@@ -606,12 +618,6 @@ int InitSPI()
   printf("Initializing display\n");
   InitSPIDisplay(); //initialize display connected to SPI0, CE0
 
-#if defined(CS_COPY) || defined(CS_SPLIT) //initialize 2nd display
-  CS_TARGET = 1; //CE1
-  InitSPIDisplay(); //initialize display on SPI0, CE1
-  CS_TARGET = 0; //back to CE0 (probably not necessary?)
-#endif
-
 #ifdef USE_SPI_THREAD
   // Create a dedicated thread to feed the SPI bus. While this is fast, it consumes a lot of CPU. It would be best to replace
   // this thread with a kernel module that processes the created SPI task queue using interrupts. (while juggling the GPIO D/C line as well)
@@ -620,7 +626,9 @@ int InitSPI()
   if (rc != 0) FATAL_ERROR("Failed to create SPI thread!");
 #else
   // We will be running SPI tasks continuously from the main thread, so keep SPI Transfer Active throughout the lifetime of the driver.
-  BEGIN_SPI_COMMUNICATION();
+  printf("SPI Transfer thread kept active -- may not be compatible with 2 displays\n");
+  bool CS_BIT = 0;
+  BEGIN_SPI_COMMUNICATION(CS_BIT);
 #endif
 
 #endif
@@ -640,7 +648,7 @@ void DeinitSPI()
   DeinitDMA();
 #endif
 
-  spi->cs = BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS | CS_TARGET;
+  spi->cs = BCM2835_SPI0_CS_CLEAR | DISPLAY_SPI_DRIVE_SETTINGS;
 
 #ifndef KERNEL_MODULE_CLIENT
 #ifdef GPIO_TFT_DATA_CONTROL
