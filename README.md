@@ -11,11 +11,12 @@ This fork (currently early in development) is intended to accomplish 2 new thing
 1) GC9307 display support tested and (basically) working! 
    - Custom GC9307 display files added (GC9307.h and GC9307.cpp)
    - GC9307 files are included if build option -GC9307 is used (CMakeLists.txt,  display.cpp). 
-   - There might be some small issue with spans being misaligned ot missed entirely - some pixels don't seem to update on occasion
+   - There might be some small issue with spans being misaligned or missed entirely - some pixels don't seem to update on occasion
 
 2) Functionality for 2 displays still early in development:
    - added CS_BIT into (hopefully) all relevent fields where SPI register is controlled (spi.h, spi.cpp, dma.cpp, bcm2835_spi_display)
    - added csBit as member of SPITask, to hopefully be able to set the cs on a task-by-task basis
+   - added CS_BIT as an input to functions that need it (BEGIN/END_SPI_COMMUNICATION, QUEUE_SPI_TRANSFER/SPI_TRANSFER, MOVE_CURSOR [etc.], AllocTask)
    - where the display is inititialized, if NUM_DISPLAY_LOOPS = 2, the display is initialized twice - once for each chip select.
 
 ### Now back to the original README...
