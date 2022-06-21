@@ -16,8 +16,9 @@ This fork (currently early in development) is intended to accomplish 2 new thing
 2) Functionality for 2 displays still early in development:
    - added CS_BIT into (hopefully) all relevent fields where SPI register is controlled (spi.h, spi.cpp, dma.cpp, bcm2835_spi_display)
    - added csBit as member of SPITask, to hopefully be able to set the cs on a task-by-task basis
-   - added CS_BIT as an input to functions that need it (BEGIN/END_SPI_COMMUNICATION, QUEUE_SPI_TRANSFER/SPI_TRANSFER, MOVE_CURSOR [etc.], AllocTask)
-   - where the display is inititialized, if NUM_DISPLAY_LOOPS = 2, the display is initialized twice - once for each chip select.
+   - added CS_BIT as an input to functions that need it (BEGIN/END_SPI_COMMUNICATION, QUEUE_SPI_TRANSFER/SPI_TRANSFER, QUEUE_MOVE_CURSOR_TASK, QUEUE_SET_WRITE_WINDOW_TASK, AllocTask)
+   - where the display is inititialized or modified (display_initialization_thread, clearscreen, functions in gc9307.cpp), if NUM_DISPLAY_LOOPS = 2, the code is looped through twice - once for each chip select.
+   - in functions that get tasks (pumpSPI, executeSPITasks), begin spi communication with CS0, but end/start with a different cs bit every time a new task->csBit changes
 
 ### Now back to the original README...
 
