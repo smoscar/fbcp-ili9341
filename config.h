@@ -5,8 +5,12 @@
 #define TARGET_FRAME_RATE 60
 #define DOUBLE_DISPLAY
 #define NUM_DISPLAY_LOOPS 2
-//////////lots more to define
-
+#define DISPLAY_CROPPED_INSTEAD_OF_SCALING
+#define DISPLAY_NEEDS_CHIP_SELECT_SIGNAL
+#define DISPLAY_USES_CE1
+// #define ALL_TASKS_SHOULD_DMA
+// #define UPDATE_FRAMES_WITHOUT_DIFFING
+// #define USE_DMA_TRANSFERS
 
 // Build options: Uncomment any of these, or set at the command line to configure:
 
@@ -247,11 +251,3 @@
 // driving thread. Otherwise, let the kernel drive SPI (e.g. via interrupts or its own thread)
 // This should be unset, only available for debugging.
 // #define KERNEL_MODULE_CLIENT_DRIVES
-
-// testing: normally, a single frame is sent over SPI just once, but for CS_SPLIT/COPY options, the 
-// relevant code will be looped through twice to send frames to CE0 and CE1
-#if defined(CS_SPLIT) || defined(CS_COPY)
-	#define NUM_CS_LOOPS 2
-#else
-	#define NUM_CS_LOOPS 1
-#endif

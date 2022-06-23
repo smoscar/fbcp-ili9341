@@ -11,7 +11,7 @@
 #define DISPLAY_NATIVE_WIDTH 240
 #define DISPLAY_NATIVE_HEIGHT 210
 
-// Not sure what this does
+// I believe this reduces the effective screen size
 #define DISPLAY_NATIVE_COVERED_LEFT_SIDE 0
 #define DISPLAY_NATIVE_COVERED_TOP_SIDE 0
 

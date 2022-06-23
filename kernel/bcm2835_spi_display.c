@@ -360,7 +360,7 @@ static int display_initialization_thread(void *unused)
   bool CS_BIT = 0;
   for (uint8_t DISPLAY_LOOP; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, CS_BIT = !CS_BIT)
   {
-  printk(KERN_INFO "Initializing display in SPI Display driver thread");
+  printk(KERN_INFO "Initializing display %d in SPI Display driver thread", CS_BIT);
   
   // Initialize display. TODO: Move to be shared with ili9341.cpp.
   QUEUE_SPI_TRANSFER(CS_BIT, 0xC0/*Power Control 1*/, 0x23/*VRH=4.60V*/); // Set the GVDD level, which is a reference level for the VCOM level and the grayscale voltage level.
