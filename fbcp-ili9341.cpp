@@ -162,7 +162,7 @@ int main()
   while(programRunning)
   {
     ////////TESTING
-    for (DISPLAY_LOOP = 0; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, CS_BIT = !CS_BIT)
+    for (uint8_t DISPLAY_LOOP = 0; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, CS_BIT = !CS_BIT)
     {
     prevFrameWasInterlacedUpdate = interlacedUpdate;
 

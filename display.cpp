@@ -40,4 +40,3 @@ void ClearScreen()
 #endif
   }
 }
-

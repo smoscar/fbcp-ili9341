@@ -453,10 +453,10 @@ void ExecuteSPITasks()
       if (task)
       {
 #ifndef USE_DMA_TRANSFERS
-        if (CS_BIT ~= task->csBit)
+        if (CS_BIT != task->csBit)
         {
           END_SPI_COMMUNICATION(CS_BIT);
-          CS_BIT = != CS_BIT;
+					CS_BIT = ~CS_BIT;
           BEGIN_SPI_COMMUNICATION(CS_BIT);
         }
 #endif
