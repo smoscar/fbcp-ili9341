@@ -25,7 +25,7 @@ void InitGC9307()
   __sync_synchronize();
   
   bool SPI_CS_BIT = 0;
-#if defined(DISPLAY_USES_CE1) && NUM_DISPLAY_LOOPS < 2
+#if defined(DISPLAY_USES_CS1) && NUM_DISPLAY_LOOPS < 2
   SPI_CS_BIT = 1;
 #endif
 
@@ -99,7 +99,7 @@ void TurnDisplayOff()
 #endif
 #if 0
   bool SPI_CS_BIT = 0
-#if defined(DISPLAY_USES_CE1) && NUM_DISPLAY_LOOPS < 2
+#if defined(DISPLAY_USES_CS1) && NUM_DISPLAY_LOOPS < 2
   SPI_CS_BIT = 1;
 #endif
   for (uint8_t DISPLAY_LOOP = 0; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, SPI_CS_BIT = !SPI_CS_BIT)
@@ -115,7 +115,7 @@ void TurnDisplayOn()
 {
 #if 0
   bool SPI_CS_BIT = 0
-#if defined(DISPLAY_USES_CE1) && NUM_DISPLAY_LOOPS < 2
+#if defined(DISPLAY_USES_CS1) && NUM_DISPLAY_LOOPS < 2
   SPI_CS_BIT = 1;
 #endif
   for (uint8_t DISPLAY_LOOP = 0; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, SPI_CS_BIT = !SPI_CS_BIT)
@@ -134,7 +134,7 @@ void TurnDisplayOn()
 void DeinitSPIDisplay()
 {
   bool SPI_CS_BIT = 0
-#if defined(DISPLAY_USES_CE1) && NUM_DISPLAY_LOOPS < 2
+#if defined(DISPLAY_USES_CS1) && NUM_DISPLAY_LOOPS < 2
   SPI_CS_BIT = 1;
 #endif
   for (uint8_t DISPLAY_LOOP = 0; DISPLAY_LOOP < NUM_DISPLAY_LOOPS; DISPLAY_LOOP++, SPI_CS_BIT = !SPI_CS_BIT)

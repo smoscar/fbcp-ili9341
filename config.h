@@ -5,8 +5,7 @@
 #define TARGET_FRAME_RATE 60
 #define DOUBLE_DISPLAY
 //#define DISPLAY_CROPPED_INSTEAD_OF_SCALING
-#define DISPLAY_NEEDS_CHIP_SELECT_SIGNAL
-#define DISPLAY_USES_CE1
+#define DISPLAY_USES_CS1
 // #define ALL_TASKS_SHOULD_DMA
 // #define UPDATE_FRAMES_WITHOUT_DIFFING
 // #define USE_DMA_TRANSFERS
@@ -157,11 +156,11 @@
 
 // Detects when the activity on the screen is mostly idle, and goes to low power mode, in which new
 // frames will be polled first at 10fps, and ultimately at only 2fps.
-#define SAVE_BATTERY_BY_SLEEPING_WHEN_IDLE
+//#define SAVE_BATTERY_BY_SLEEPING_WHEN_IDLE
 
 // Builds a histogram of observed frame intervals and uses that to sync to a known update rate. This aims
 // to detect if an application uses a non-60Hz update rate, and synchronizes to that instead.
-#define SAVE_BATTERY_BY_PREDICTING_FRAME_ARRIVAL_TIMES
+//#define SAVE_BATTERY_BY_PREDICTING_FRAME_ARRIVAL_TIMES
 
 // If defined, rotates the display 180 degrees. This might not rotate the panel scan order though,
 // so adding this can cause up to one vsync worth of extra display latency. It is best to avoid this and
@@ -198,7 +197,7 @@
 // DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE enabled: traditional no-vsync tearing (tear line runs in portrait
 // i.e. narrow direction)
 #if !defined(SINGLE_CORE_BOARD)
-#define DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE
+//#define DISPLAY_FLIP_ORIENTATION_IN_SOFTWARE
 #endif
 
 // If enabled, build to utilize DMA transfers to communicate with the SPI peripheral. Otherwise polling
